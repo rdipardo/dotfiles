@@ -1,0 +1,14 @@
+{
+  "ui_theme" : "darkwolf",
+  "ui_theme_syntax" : "sub",
+  "pylib__linux" : "/usr/lib/x86_64-linux-gnu/libpython3.11.so",
+  "font_name__linux" : "Monospace",
+  "font_size__linux" : 10,
+  "ui_font_name__linux" : "Hack",
+  "ui_font_size__linux" : 9,
+  "ui_toolbar_show" : false,
+  "comment_move_down": false,
+  "comment_skip_blank": true,
+  "saving_trim_spaces": true,
+  "export_html_font_name": "Monospace",
+}

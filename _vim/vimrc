@@ -1,0 +1,404 @@
+"" Be considerate of system default vi on older Debians (-DTINY_VIMRC)
+set nocompatible
+
+"" Skip out when running ex, vi, vim.tiny, etc.
+if !has('autocmd') || mode(1) ==# 'ce' | finish | endif
+
+""      Config Dir {{{
+if has('win32') && !has('nvim')
+  let s:vim_home = expand('~/vimfiles/')
+  let &pythonthreehome=expand('~/scoop/apps/python/current/')
+elseif has('nvim')
+  if has('win32')
+    let s:vim_home = expand('~/AppData/Local/nvim/')
+  else
+    let s:vim_home = expand('~/.config/nvim/')
+  endif
+else
+  let s:vim_home = expand('~/.vim/')
+endif
+" }}}
+
+""      Plugin Setup {{{
+let s:plug_vim_home = s:vim_home . 'autoload/plug.vim'
+
+"" https://stackoverflow.com/q/50629106
+if !filereadable(expand(s:plug_vim_home))
+  exec 'silent !curl --ssl-no-revoke -sfLo ' .
+       \ expand(s:plug_vim_home) .
+       \ ' --create-dirs ' .
+       \ 'https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+  if filereadable(expand(s:plug_vim_home))
+    augroup PlugVimInstalled
+      autocmd VimEnter * echom
+            \ '`plug.vim` now installed at ' .
+            \ expand(s:vim_home) . 'autoload'
+    augroup END
+  endif
+endif
+
+call plug#begin(expand(s:vim_home . 'plugins'))
+
+"" Some good colour schemes
+Plug 'Lokaltog/vim-distinguished'
+Plug 'sro5h/vim-darkspace'
+" Plug 'tyrannicaltoucan/vim-deep-space'
+" Plug 'yuttie/hydrangea-vim'
+" Plug 'bcat/abbott.vim'
+Plug 'NLKNguyen/papercolor-theme'
+
+" Plug 'itchyny/lightline.vim'
+Plug 'vim-airline/vim-airline'
+Plug 'krcs/vim-movelines'
+
+""
+"" Language support
+""
+" apt install exuberant-ctags (<= stretch)
+" apt install universal-ctags (buster)
+" https://github.com/preservim/tagbar
+Plug 'preservim/tagbar'
+
+"" https://github.com/dense-analysis/ale
+Plug 'dense-analysis/ale'
+
+"" https://github.com/neoclide/coc.nvim
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
+"" https://github.com/mg979/vim-visual-multi/blob/master/doc/vm-tutorial
+Plug 'mg979/vim-visual-multi', {'branch': 'master'}
+
+"" reStructuredText editing, live previews
+Plug 'Rykka/riv.vim'
+Plug 'Rykka/InstantRst'
+
+"" Markdown
+Plug 'iamcco/markdown-preview.nvim', {'do': 'cd app && yarn install'}
+
+"" easily toggle line comments
+Plug 'tpope/vim-commentary'
+
+"" LISP and family
+Plug 'vlime/vlime', {'rtp': 'vim/'}
+Plug 'guns/vim-sexp'
+Plug 'tpope/vim-sexp-mappings-for-regular-people'
+Plug 'luochen1990/rainbow'
+
+"" intelligent paren matching
+"" requires rustc, cargo, and llvm
+"" -- NOT FOR SLOW MACHINES! --
+" Plug 'eraserhd/parinfer-rust', {'do': 'cargo build --release'}
+
+"" Prolog syntax
+Plug 'yochem/prolog.vim'
+
+"" ARM assembly syntax
+Plug 'ARM9/arm-syntax-vim'
+
+"" MIPS assembly syntax
+Plug 'benknoble/vim-mips'
+
+"" seamless REPL jack-in, live evaluation
+let s:supports_vim_iced = v:false
+if filereadable(expand(s:plug_vim_home))
+  if ((v:version >= 900 || v:version == 801 && has('patch614')) && !has('win32')) || has('nvim')
+    let s:supports_vim_iced = v:true
+  endif
+if (s:supports_vim_iced)
+  Plug 'liquidz/vim-iced', {'for': 'clojure'}
+  Plug 'liquidz/vim-iced-coc-source', {'for': 'clojure'}
+endif
+
+"" Kotlin
+" Plug 'udalov/kotlin-vim'
+
+"" Rust
+" Plug 'rust-lang/rust.vim'
+
+"" F# syntax and FSI integration
+Plug 'ionide/Ionide-vim'
+
+if has('win32')
+  let g:user#LanguageClient_post_install = 'powershell -ExecutionPolicy Bypass -File .\install.ps1'
+else
+  let g:user#LanguageClient_post_install = 'bash ./install.sh'
+endif
+
+Plug 'autozimu/LanguageClient-neovim', {
+  \ 'branch': 'next',
+  \ 'do': g:user#LanguageClient_post_install
+  \ }
+
+unlet g:user#LanguageClient_post_install
+call plug#end()
+endif
+" }}}
+
+""      Plugin Configuration  {{{
+""
+""" coc.nvim {{{
+if (!empty(globpath(&rtp, 'plugins/coc.nvim', 0, 1)))
+    " use <CR> to confirm completion
+    " https://github.com/neoclide/coc.nvim/issues/4139
+    inoremap <expr> <CR> coc#pum#visible() ? coc#_select_confirm() : '\<CR>'
+endif
+""" }}}
+
+""" vlime {{{
+"" first install and configure quicklisp: https://www.quicklisp.org/beta/#loading
+""
+if (!empty(globpath(&rtp, 'plugins/vlime/lisp', 0, 1)))
+    let g:vlime_cl_impl = 'clisp'
+    function! VlimeBuildServerCommandFor_clisp(vlime_loader, vlime_eval)
+        return [g:vlime_cl_impl,
+                \ '-i', '~/quicklisp/setup.lisp',
+                \ '-i', a:vlime_loader,
+                \ '-x', a:vlime_eval,
+                \ '-repl',
+                \ '--quiet']
+    endfunction
+endif
+" }}}
+
+""" vim-iced {{{
+""  requires `bb` in PATH: https://github.com/borkdude/babashka
+""
+if !empty(globpath(&rtp, 'plugins/vim-iced/bin/iced', 0, 1))
+  func! s:getIcedExec() abort
+    return fnamemodify(
+    \   globpath(&rtp, 'plugins/vim-iced/bin/iced', 0, 1)[0],
+    \ ':p')
+  endfunc
+
+  let s:iced_exec = s:getIcedExec()
+
+  if s:supports_vim_iced && !empty(s:iced_exec)
+    exec 'silent !\export PATH=$PATH:' . s:iced_exec
+    let g:iced#repl#babashka_repl_type = 'nrepl'
+    let g:iced_enable_default_key_mappings=v:true
+
+    augroup VimIcedREPLAutoStart
+        autocmd!
+        au BufNewFile,BufRead *.clj,*.cljc IcedInstantConnect babashka
+    augroup END
+  endif
+endif
+" }}}
+
+""" A.L.E. {{{
+""  only run linters named in ale_linters settings:
+""  https://github.com/dense-analysis/ale#faq-disable-linters
+let g:ale_linters_explicit = 1
+let g:ale_fix_on_save = 1
+
+"" clj-kondo: `npm install -g clj-kondo`
+"" rust: rustc, cargo, llvm
+let g:ale_linters = {
+\   'clojure': ['clj-kondo'],
+\   'python': ['pylint3', 'flake8'],
+\   'rust': ['cargo', 'rustc']
+\}
+let g:ale_fixers = {
+\   '*': ['remove_trailing_lines', 'trim_whitespace'],
+\   'c': ['clang-format'],
+\   'c++': ['clang-format'],
+\   'python': ['add_blank_lines_for_python_control_statements',
+\              'reorder-python-imports'],
+\   'ruby': ['rubocop'],
+\   'rust': ['rustfmt']
+\}
+
+map <silent> <C-k> <Plug>(ale_previous)
+map <silent> <C-j> <Plug>(ale_next)
+" }}}
+
+""" Ionide-vim {{{
+""
+if !empty(globpath(&rtp, 'ftplugin/fsharp.vim', 0, 1))
+    set hidden
+    let mapleader = '\'
+    let g:fsharp#fsi_keymap = 'vim-fsharp'
+    let g:fsharp#backend = (has('nvim')) ? 'nvim' : 'languageclient-neovim'
+    let g:fsharp#exclude_project_directories = ['paket-files']
+    nnoremap <silent> <leader>l <ESC>:call fsharp#sendFsi('#load @"' . expand('%:p') . '"') <CR>
+    nnoremap <silent> <leader>o <ESC>:call fsharp#sendFsi('open ' . expand('%:t:r')) <CR>
+
+    let g:LanguageClient_useVirtualText = 'CodeLens'
+    let g:LanguageClient_serverCommands = {
+        \ 'fsharp': ['~/.dotnet/tools/fsautocomplete', '--background-service-enabled'],
+        \ 'codelens': {
+        \    'generate': v:true
+        \  }
+        \ }
+
+      " https://github.com/autozimu/LanguageClient-neovim#quick-start
+      nnoremap <silent> [g <Plug>(lcn-diagnostics-prev)
+      nnoremap <silent> ]g <Plug>(lcn-diagnostics-next)
+      nnoremap <silent> gd <Plug>(lcn-definition)
+      nnoremap <silent> gy <Plug>(lcn-type-definition)
+      nnoremap <silent> gi <Plug>(lcn-implementation)
+      nnoremap <silent> gr <Plug>(lcn-references)
+      nnoremap <silent> [k <Plug>(lcn-hover)
+      nnoremap <F7> <Plug>(lcn-rename)
+
+      if has('nvim') && exists('*nvim_open_win')
+        set updatetime=1000
+        augroup FSharpShowTooltip
+          autocmd!
+          autocmd CursorHold *.fs,*.fsi,*.fsx call fsharp#showTooltip()
+        augroup END
+    endif
+endif
+" }}}
+
+""" riv.vim {{{
+""
+let g:riv_section_levels = '=-^"''`'
+let g:riv_fold_auto_update = 0
+let g:instant_rst_localhost_only = 1
+
+augroup RivUpdateFolds
+    autocmd!
+    au BufNewFile,BufRead *.rst :norm zx zi
+    au BufWritePost *.rst :norm zx zi
+augroup END
+" }}}
+
+""" rainbow
+""
+let g:rainbow_active = 1
+
+""" Tagbar
+""
+nmap <silent> <F12> :TagbarToggle<CR>
+
+"" vim-movelines
+nnoremap <silent> <A-DOWN> :call MoveLineNormal("d")<CR>
+vnoremap <silent> <A-DOWN> :call MoveLinesVisual("down")<CR>
+
+"" Maxima
+augroup MaximaConfig
+    au BufNewFile,BufRead *.mac,*.mc,*.wxm :set ft=maxima
+    au FileType maxima
+    \ nnoremap <F8> :exec '!maxima --very-quiet < '.escape(expand('%'), ' ,\')<CR>
+augroup END
+
+" }}}
+
+""      General Vim Settings {{{
+set fileencodings=utf-8,latin1
+set encoding=utf-8
+scriptencoding utf-8
+
+""" Window Behaviour
+set wildmenu "show completions in status bar
+set laststatus=2
+
+"" https://thoughtbot.com/blog/vim-splits-move-faster-and-more-naturally
+set splitbelow
+set splitright
+
+"" NETRW browser tweaks: https://www.youtube.com/watch?v=XA2WjJbmmoM
+let g:netrw_banner=0
+let g:netrw_browse_split=4
+let g:netrw_altv=1
+let g:netrw_liststyle=3
+
+"" https://shapeshed.com/vim-netrw/#changing-the-directory-view-in-netrw
+let g:netrw_altv = 1
+let g:netrw_winsize = 20
+
+augroup EditorDefaults
+  autocmd!
+  au VimEnter * :Vexplore | :wincmd l
+  au BufRead,BufNewFile *.markdown,*.md,*.rst,*.textile,*.txt :setlocal spell
+  au FileType gitcommit :setlocal spell
+  "" trim trailing space on save
+  au BufWritePre * :%s/\s\+$//e
+augroup END
+
+""" Colours {{{
+set background=dark
+colorscheme industry
+
+if (v:version >= 800)
+  set termguicolors "Switch off for WSL!
+  if index(getcompletion('', 'color'), 'deep-space') > -1
+    colorscheme deep-space
+    let g:deepspace_italics=1
+    let g:lightline = {'colorscheme': 'deepspace'}
+  elseif index(getcompletion('', 'color'), 'darkspace') > -1
+    colorscheme darkspace
+    let g:darkspace_italics=1
+    let g:airline_theme='darkspace'
+    let g:airline_extensions = []
+  else
+    " colorscheme hydrangea
+    " let g:lightline = { 'colorscheme': 'hydrangea' }
+  endif
+endif
+
+"" https://stackoverflow.com/a/3316521
+if has('gui_running')
+  if has('gui_gtk2')
+    set guifont=Inconsolata\ 12
+  elseif has('gui_macvim')
+    set guifont=Menlo\ Regular:h14
+  elseif has('gui_win32')
+    set guifont=Consolas:h11:cANSI
+  endif
+endif
+" }}}
+
+""" Editor {{{
+syntax on
+filetype plugin indent on
+set nu
+set hls
+set spelllang=en_ca
+set lcs+=space:·
+"" https://github.com/vim/vim/blob/master/runtime/syntax/pascal.vim#L181
+let g:pascal_fpc=1
+
+""
+"" From https://github.com/amix/vimrc/blob/master/vimrcs/basic.vim
+""
+set shiftwidth=4 " 1 tab == 4 spcs
+set tabstop=4
+set expandtab " Render tabs as spaces
+set smarttab
+set ai " Auto indent
+set si " Smart indent
+
+set lbr
+set tw=500 " break after 500 characters
+set wrap " wrap lines
+
+set noswapfile " keep source trees clean
+" }}}
+
+""" Key mappings {{{
+
+"" Surround with quote: https://stackoverflow.com/a/2148055
+nnoremap qw ciw'<C-r>"'<Esc>
+nnoremap qqw ciw"<C-r>""<Esc>
+nnoremap sw ciw(<C-r>")<Esc>
+nnoremap swb v%c[<C-r>"]<Esc>
+nnoremap swcb v%c{<C-r>"}<Esc>
+
+"" hide search matches: https://stackoverflow.com/a/657457
+nnoremap <silent> <Space>h :noh<CR>
+nnoremap <silent> <Space>s :w %<CR>
+
+" clipboard copy/paste
+vnoremap <silent> <C-C> <Esc>"*yv
+nnoremap <silent> <C-V> <Esc>"*p<Esc>
+inoremap <buffer> <C-V> <Esc>"*pa
+
+"" Quick exit
+nnoremap <silent> <F10> :set awa<CR>:qa<CR>
+" }}}
+
+set nocompatible&
+" }}}
+" vim: foldmethod=marker

@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+git log --pretty="format:%h %G? %cs%x09%aN%x09%s" "$@"

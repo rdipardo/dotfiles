@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -e
+
+[ "$1" ] && CONTAINER="$1" || CONTAINER=mssqlserver22
+[ "$2" ] && EDITION="$2" || EDITION=2022
+sudo systemctl restart docker &
+tail --pid=$! -f /dev/null
+
+PASSWD=
+INSTANCE=$(docker images | awk "/mssql.*$EDITION/{split(\$0,a);print a[1] \":\" a[2]}")
+
+srv_login() {
+    read -rsp "SA password for ${CONTAINER}? " PASSWD
+    echo
+    docker run -e 'ACCEPT_EULA=Y' \
+             -e "SA_PASSWORD=${PASSWD}" \
+             --name "${CONTAINER}"\
+             -p 1433:1433 \
+             -d "$1"
+}
+
+if [[ -z "$INSTANCE" ]]; then
+    docker pull "mcr.microsoft.com/mssql/server:$EDITION-latest"
+    srv_login "mcr.microsoft.com/mssql/server:$EDITION-latest"
+else
+  if [[ -z $(docker container ls -a --format '{{.Names}}' | awk "/$CONTAINER/") ]]; then
+      srv_login "${INSTANCE}"
+  fi
+fi
+
+echo "Starting container with name: ${CONTAINER}"
+
+docker start "${CONTAINER}" &
+tail --pid=$! -f /dev/null
+IPV4=$(docker inspect "${CONTAINER}"| jq -Mcr '.[].NetworkSettings.Networks.bridge.IPAddress')
+# https://wiki.nftables.org/wiki-nftables/index.php/Performing_Network_Address_Translation_(NAT)#Destination_NAT
+sudo nft flush table nat
+sudo nft add table nat
+sudo nft 'add chain nat prerouting { type nat hook prerouting priority 0; }'
+sudo nft "add rule nat prerouting iifname docker0 tcp dport { 1433 } dnat to ${IPV4}:1433"
+
+#tsql -C
+#tsql -H "${IPV4}" -p 1433 -U SA -P "${PASSWD}"

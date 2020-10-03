@@ -1,0 +1,19 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use DBI;
+
+my @drivers = DBI->available_drivers();
+
+die "Missing DBD::ODBC module!" unless grep(/ODBC/, @drivers);
+
+eval {
+    my @dataSources = DBI->data_sources("ODBC");
+    my $count = scalar @dataSources;
+    print "\nFound $count ODBC DSN(s): \n\n";
+    foreach my $dataSource ( @dataSources ) {
+        print "\t- $dataSource\n";
+    }
+};
+
+exit;

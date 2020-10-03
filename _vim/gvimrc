@@ -1,0 +1,23 @@
+" https://vim.fandom.com/wiki/Maximize_or_set_initial_window_size#To_set_the_initial_size_of_the_Vim_window
+augroup MaximizeOnStart
+  if has('gui_running')
+    if has('win32')
+      set gfn=Consolas:h10:cANSI
+      set gfw=Cascadia\ Mono:h10
+      au GUIEnter * simalt ~x
+    else
+      au GUIEnter * set lines=999 columns=999
+    endif
+  endif
+augroup END
+
+" Navigate windows
+" https://vim.fandom.com/wiki/Switch_between_Vim_window_splits_easily?useskin=monobook
+nmap <silent> <M-Up> :wincmd k<CR>
+nmap <silent> <M-Down> :wincmd j<CR>
+nmap <silent> <M-Left> :wincmd h<CR>
+nmap <silent> <M-Right> :wincmd l<CR>
+
+"" Tweak s-expr mappings
+nmap <C-Left> <Plug>(sexp_capture_prev_element)
+nmap <C-Right> <Plug>(sexp_capture_next_element)

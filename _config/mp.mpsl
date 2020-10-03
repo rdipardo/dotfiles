@@ -1,0 +1,6 @@
+mp.config.ansi_rgbcolor = 1;
+mp.config.font_size = 10;
+mp.config.show_line_numbers = 1;
+mp.config.auto_indent = 1;
+mp.config.visual_wrap = 1;
+mp.config.ispell_cmd = "aspell -a";

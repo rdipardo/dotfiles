@@ -1,0 +1,45 @@
+########
+dotfiles
+########
+
+Assumptions
+===========
+- a fresh installation of Debian (stable), Ubuntu, or derivative
+- ``sudo`` is available and ``sudo usermod -aG sudo $USER`` has been run
+  successfully
+
+Setup
+=====
+Make sure that `rename <https://packages.debian.org/stable/rename>`_ is (or
+can be) installed.
+
+Clone this repo and run ``chmod +x ./install.sh && ./install.sh``
+
+:NOTE: Existing directories will **not** be overwritten by the
+       `installation script <./install.sh>`_.
+
+       Edit the script to run ``rename`` with `the -f option`_ if a
+       potentially destructive installation is what you want.
+
+Some essential packages
+=======================
+- `docker <https://docs.docker.com/engine/install/debian/>`_
+- `findutils <https://packages.debian.org/en/stable/findutils>`_
+- `freetds-dev <https://packages.debian.org/stable/freetds-dev>`_
+- `gettext <https://packages.debian.org/stable/gettext>`_
+- `gperf <https://packages.debian.org/stable/gperf>`_
+- `jq <https://packages.debian.org/stable/jq>`_
+- `nftables <https://wiki.debian.org/nftables>`_
+- `perl <https://packages.debian.org/stable/perl>`_ with both the ``DBI`` and
+  ``DBD::ODBC`` modules installed: ``$ sudo cpan DBI DBD::ODBC``
+- `pkg-config <https://packages.debian.org/stable/pkg-config>`_
+- `python <https://packages.debian.org/stable/python3>`_
+- `rlwrap <https://packages.debian.org/stable/rlwrap>`_
+- `tdsodbc <https://packages.debian.org/stable/tdsodbc>`_
+- `unixodbc <https://packages.debian.org/stable/unixodbc>`_
+- `unixodbc-dev <https://packages.debian.org/stable/unixodbc-dev>`_
+
+
+.. _`the -f option`: https://manpages.debian.org/testing/rename/file-rename.1p.en.html
+
+.. vim: ft=rst

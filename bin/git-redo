@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2086
+for (( i=0; i<${#1}; i++ )); do
+  case "${1:$i:1}" in
+    's' | 'S') SWITCH="$SWITCH -S " ;;
+    'r' | 'R') SWITCH="$SWITCH --reset-author " ;;
+  esac
+done
+case "${1//[^nN]/}" in
+  'n' | 'N')
+    git commit --amend --no-edit $SWITCH --date="\"$(date +'%a %d %b %H:%M:%S %Y %z')\""
+    ;;
+  *)
+    git commit --amend --no-edit $SWITCH
+    ;;
+esac

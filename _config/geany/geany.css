@@ -1,0 +1,23 @@
+/* Colour values borrowed from:
+ *
+ * @carlos157oliveira
+ *   https://github.com/geany/geany/issues/2644#issuecomment-808731976
+ *
+ * @techee
+ *   https://github.com/geany/geany/pull/3013/files
+ */
+#geany-compiler-error {
+    color: #FF3030;
+}
+
+#geany-compiler-message {
+    color: #8AADFF;
+}
+
+#geany-compiler-context {
+    color: #F98600;
+}
+
+#geany-terminal-dirty {
+    color: #FF3030;
+}
