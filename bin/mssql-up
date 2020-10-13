@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -e
+
+if ! [[ -x $(command -v jq) ]]; then sudo apt -y install jq; fi
+
+[ "$1" ] && CONTAINER="$1" || CONTAINER=mssqlserver17
+[ "$2" ] && EDITION="$2" || EDITION=2017
+sudo service docker restart &
+tail --pid=$! -f /dev/null
+
+INSTANCE=$(docker images | awk "/mssql.*$EDITION/{print $1 \":\" $2}")
+
+if [[ -z "$INSTANCE" ]]; then
+    docker pull mcr.microsoft.com/mssql/server:$EDITION-latest
+    read -rsp "SA password for ${CONTAINER}? " passwd
+    docker run -e 'ACCEPT_EULA=Y' \
+             -e "SA_PASSWORD=${passwd}" \
+             --name "${CONTAINER}"\
+             -p 1433:1433 \
+             -d mcr.microsoft.com/mssql/server:$EDITION-latest
+else
+  if [[ -z $(docker container ls -a --format '{{.Names}}' | awk "/$CONTAINER/") ]]; then
+      docker run --name "${CONTAINER}" -p 1433:1433 -d "${INSTANCE}"
+  fi
+fi
+
+echo "Starting container with name: ${CONTAINER}"
+
+docker start "${CONTAINER}" &
+tail --pid=$! -f /dev/null
+IPV4=$(docker inspect "${CONTAINER}"| jq -Mcr '.[].NetworkSettings.Networks.bridge.IPAddress')
+# https://stackoverflow.com/a/19905563
+sudo iptables -t nat -A DOCKER -p tcp --dport 1433 -j DNAT --to-destination "${IPV4}:1433"
+
+#tsql -C
+#tsql -H "${IPV4}" -p 1433 -U SA -P "${passwd}"

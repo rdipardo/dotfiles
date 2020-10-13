@@ -1,0 +1,23 @@
+[core]
+  autocrlf = false
+  excludesfile = $HOME/.gitignore_global
+  editor = vim
+  pager = less -F -X
+[color]
+  ui = false
+[push]
+  followTags = true
+[merge]
+  tool = meld
+[mergetool]
+  keepBackup = false
+[apply]
+  whitespace = nowarn
+[transfer]
+  fsckObjects = true
+[receive]
+  fsckObjects = true
+[fetch]
+  fsckObjects = true
+[pull]
+  rebase = false

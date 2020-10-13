@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+if ! [[ -f $(command -v luit) ]]; then
+    sudo apt -y install x11-utils
+fi
+if ! [[ -x $(command -v _ascii) ]]; then
+    chmod 744 "$HOME/bin/ascii_bin/build.sh"
+    sh -c "$HOME/bin/ascii_bin/build.sh"
+fi
+
+luit -encoding ISO-8859-1 "$HOME/bin/_ascii"

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+if [ "$(find /usr/share/doc/postgresql*/html -type d | grep -c html)" -eq 0 ]; then
+    sudo apt -y install postgresql-doc
+fi
+
+python3 -m http.server --directory /usr/share/doc/postgresql*/html || exit 0

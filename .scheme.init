@@ -1,0 +1,4 @@
+(load
+  (string-append
+    (get-environment-variable "SCHEME_LIBRARY_PATH")
+    "mitscheme.init"))

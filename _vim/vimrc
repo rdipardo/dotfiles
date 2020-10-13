@@ -1,0 +1,336 @@
+"" Skip out when running vi, vim.tiny, etc.
+if !has('autocmd') | finish | endif
+
+if has('win32')
+  let s:vim_home = expand('~/vimfiles/')
+elseif has('nvim')
+  let s:vim_home = expand('~/.config/nvim/')
+else
+  let s:vim_home = expand('~/.vim/')
+endif
+
+"" ==========================================================
+""      Plugin Setup
+"" ==========================================================
+let s:plug_vim_home = s:vim_home . 'autoload/plug.vim'
+
+"" https://stackoverflow.com/q/50629106
+if !filereadable(expand(s:plug_vim_home))
+  exec 'silent !curl -sfLo ' .
+       \ expand(s:plug_vim_home) .
+       \ ' --create-dirs ' .
+       \ 'https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+  augroup PlugVimInstalled
+      autocmd VimEnter * echom
+            \ '`plug.vim` now installed at ' .
+            \ expand(s:vim_home) . 'autoload'
+  augroup END
+endif
+
+call plug#begin(expand(s:vim_home . 'plugins'))
+
+"" Some good colour schemes
+Plug 'Lokaltog/vim-distinguished'
+" Plug 'sro5h/vim-darkspace'
+Plug 'tyrannicaltoucan/vim-deep-space'
+" Plug 'yuttie/hydrangea-vim'
+" Plug 'bcat/abbott.vim'
+
+Plug 'itchyny/lightline.vim'
+
+""
+"" Language support
+""
+" apt install exuberant-ctags (<= stretch)
+" apt install universal-ctags (buster)
+" https://github.com/preservim/tagbar
+Plug 'preservim/tagbar'
+
+"" https://github.com/dense-analysis/ale
+Plug 'dense-analysis/ale'
+
+"" https://github.com/neoclide/coc.nvim
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
+"" reStructuredText editing, live previews
+Plug 'Rykka/riv.vim'
+Plug 'Rykka/InstantRst'
+
+"" easily toggle line comments
+Plug 'tpope/vim-commentary'
+
+"" LISP and family
+Plug 'guns/vim-sexp'
+Plug 'tpope/vim-sexp-mappings-for-regular-people'
+Plug 'luochen1990/rainbow'
+
+"" intelligent paren matching
+"" requires rustc, cargo, and llvm
+"" -- NOT FOR SLOW MACHINES! --
+" Plug 'eraserhd/parinfer-rust', {'do': 'cargo build --release'}
+
+"" seamless REPL jack-in, live evaluation
+let s:supports_vim_iced = v:false
+if filereadable(expand(s:plug_vim_home))
+  if (v:version >= 801 && has('patch614') && !has('win32')) || has('nvim')
+    let s:supports_vim_iced = v:true
+  endif
+if (s:supports_vim_iced)
+  Plug 'liquidz/vim-iced', {'for': 'clojure'}
+  Plug 'liquidz/vim-iced-coc-source', {'for': 'clojure'}
+endif
+
+"" Kotlin
+" Plug 'udalov/kotlin-vim'
+
+"" Rust
+" Plug 'rust-lang/rust.vim'
+
+"" F#
+if has('win32')
+  let g:user#LanguageClient_post_install = 'powershell -ExecutionPolicy Bypass -File .\install.ps1'
+  let g:user#Ionide_post_install = expand(g:user#LanguageClient_post_install)
+else
+  let g:user#LanguageClient_post_install = 'bash ./install.sh'
+  let g:user#Ionide_post_install = 'make fsautocomplete'
+endif
+
+Plug 'autozimu/LanguageClient-neovim', {
+  \ 'branch': 'next',
+  \ 'do': g:user#LanguageClient_post_install
+  \ }
+
+Plug 'ionide/Ionide-vim', {
+    \ 'do': g:user#Ionide_post_install
+    \}
+
+unlet g:user#LanguageClient_post_install
+unlet g:user#Ionide_post_install
+call plug#end()
+endif
+
+"" ==========================================================
+""      Configure Plugins
+"" ==========================================================
+
+""" vim-iced
+""  requires `bb` in PATH: https://github.com/borkdude/babashka
+""
+if (s:supports_vim_iced) && !empty(globpath(&rtp, 'plugins/vim-iced/bin/iced', 0, 1))
+  func! s:getIcedExec() abort
+    return fnamemodify(
+    \   globpath(&rtp, 'plugins/vim-iced/bin/iced', 0, 1)[0],
+    \ ':p')
+  endfunc
+
+  let s:iced_exec = s:getIcedExec()
+
+  if !empty(s:iced_exec)
+    exec 'silent !\export PATH=$PATH:' . s:iced_exec
+    let g:iced#repl#babashka_repl_type = 'nrepl'
+    let g:iced_enable_default_key_mappings=v:true
+
+    augroup VimIcedREPLAutoStart
+        autocmd!
+        au BufNewFile,BufRead *.clj,*.cljc IcedInstantConnect babashka
+    augroup END
+  endif
+endif
+
+""" rainbow
+""
+let g:rainbow_active = 1
+
+""" A.L.E.
+""  only run linters named in ale_linters settings:
+""  https://github.com/dense-analysis/ale#faq-disable-linters
+let g:ale_linters_explicit = 1
+let g:ale_fix_on_save = 1
+
+"" clj-kondo: `npm install -g clj-kondo`
+"" rust: rustc, cargo, llvm
+let g:ale_linters = {
+\   'clojure': ['clj-kondo'],
+\   'python': ['pylint3', 'flake8'],
+\   'rust': ['cargo', 'rustc']
+\}
+let g:ale_fixers = {
+\   '*': ['remove_trailing_lines', 'trim_whitespace'],
+\   'c': ['clang-format'],
+\   'c++': ['clang-format'],
+\   'python': ['add_blank_lines_for_python_control_statements',
+\              'reorder-python-imports'],
+\   'ruby': ['rubocop'],
+\   'rust': ['rustfmt']
+\}
+
+map <silent> <C-k> <Plug>(ale_previous)
+map <silent> <C-j> <Plug>(ale_next)
+
+""" coc.nvim generic LSP setup
+"" https://github.com/neoclide/coc.nvim#example-vim-configuration
+let s:prefer_coc = (has('nvim') || has('patch-8.1.1719'))
+
+if !empty(globpath(&rtp, 'plugin/coc.vim', 0, 1))
+    if !(s:prefer_coc)
+        let g:coc_disable_startup_warning = 1
+    else
+        nmap <silent> [g <Plug>(coc-diagnostic-prev)
+        nmap <silent> ]g <Plug>(coc-diagnostic-next)
+        nmap <silent> gd <Plug>(coc-definition)
+        nmap <silent> gy <Plug>(coc-type-definition)
+        nmap <silent> gi <Plug>(coc-implementation)
+        nmap <silent> gr <Plug>(coc-references)
+        nmap <F7> <Plug>(coc-rename)
+
+        func! s:goto_doc()
+          if (coc#rpc#ready()) | call CocActionAsync('doHover') | endif
+        endfunc
+
+        nnoremap <silent> [k :call <SID>goto_doc()<CR>
+    endif
+endif
+
+""" LanguageClient-neovim
+"" https://github.com/autozimu/LanguageClient-neovim
+""
+if !empty(globpath(&rtp, 'plugin/LanguageClient.vim', 0, 1))
+    if (s:prefer_coc)
+      " use the coc-fsharp extension instead: `:CocInstall coc-fsharp`
+      let g:LanguageClient_serverCommands = { 'fsharp': '' }
+    endif
+endif
+
+""" Ionide-vim
+""
+if !empty(globpath(&rtp, 'ftplugin/fsharp.vim', 0, 1))
+    set hidden
+    let mapleader = '\'
+    let g:fsharp#fsi_keymap = 'vim-fsharp'
+    nnoremap <silent> <leader>l <ESC>:call fsharp#sendFsi('#load @"' . expand('%:p') . '"') <CR>
+    nnoremap <silent> <leader>o <ESC>:call fsharp#sendFsi('open ' . expand('%:t:r')) <CR>
+endif
+
+""" riv.vim
+""
+let g:riv_section_levels = '=-^"''`'
+let g:riv_fold_auto_update = 0
+let g:instant_rst_localhost_only = 1
+
+augroup RivUpdateFolds
+    autocmd!
+    au BufNewFile,BufRead *.rst :norm zx zi
+    au BufWritePost *.rst :norm zx zi
+augroup END
+
+""" Tagbar
+""
+nmap <silent> <F12> :TagbarToggle<CR>
+
+"" ==========================================================
+""      General Vim Settings
+"" ==========================================================
+set encoding=utf-8
+
+""" Window Behaviour
+set wildmenu "show completions in status bar
+set laststatus=2
+
+"" https://thoughtbot.com/blog/vim-splits-move-faster-and-more-naturally
+set splitbelow
+set splitright
+
+"" NETRW browser tweaks: https://www.youtube.com/watch?v=XA2WjJbmmoM
+let g:netrw_banner=0
+let g:netrw_browse_split=4
+let g:netrw_altv=1
+let g:netrw_liststyle=3
+
+"" https://shapeshed.com/vim-netrw/#changing-the-directory-view-in-netrw
+let g:netrw_altv = 1
+let g:netrw_winsize = 20
+
+augroup ProjectDrawer
+  autocmd!
+  au VimEnter * :Vexplore | :wincmd l
+augroup END
+
+"""
+""" Colours
+"""
+set background=dark
+colorscheme industry
+
+if (v:version >= 800)
+  set termguicolors "Switch off for WSL!
+  if index(getcompletion('', 'color'), 'deep-space') > -1
+    colorscheme deep-space
+    let g:deepspace_italics=1
+    let g:lightline = {'colorscheme': 'deepspace'}
+
+    " colorscheme darkspace
+    " let g:darkspace_italics=1
+
+    " colorscheme hydrangea
+    " let g:lightline = { 'colorscheme': 'hydrangea' }
+  endif
+endif
+
+"" https://stackoverflow.com/a/3316521
+if has('gui_running')
+  if has('gui_gtk2')
+    set guifont=Inconsolata\ 12
+  elseif has('gui_macvim')
+    set guifont=Menlo\ Regular:h14
+  elseif has('gui_win32')
+    set guifont=Consolas:h11:cANSI
+  endif
+endif
+
+"""
+""" Editor
+"""
+syntax on
+filetype plugin indent on
+set nu
+set hls
+set spelllang=en_ca
+
+""
+"" From https://github.com/amix/vimrc/blob/master/vimrcs/basic.vim
+""
+set shiftwidth=4 " 1 tab == 4 spcs
+set tabstop=4
+set expandtab " Render tabs as spaces
+set smarttab
+set ai " Auto indent
+set si " Smart indent
+
+set lbr
+set tw=500 " break after 500 characters
+set wrap " wrap lines
+
+set noswapfile " keep source trees clean
+
+"""
+""" Key mappings
+"""
+"" Surround with quote: https://stackoverflow.com/a/2148055
+nnoremap qw ciw'<C-r>"'
+nnoremap Qw ciw"<C-r>""
+nnoremap <silent> <F3> :ls<CR> " list buffers
+nnoremap <silent> <F2> :w %<CR>
+
+"" hide search matches: https://stackoverflow.com/a/657457
+nnoremap <silent> <F4> :noh<CR>
+nnoremap <silent> <F5> vVy
+nnoremap <silent> <F6> :only<CR> " focus active window
+nnoremap <silent> <F8> dd
+
+" clipboard copy/paste
+vnoremap <silent> <C-C> <Esc>"*yv
+nnoremap <silent> <C-V> <Esc>"*p<Esc>
+inoremap <buffer> <C-V> <Esc>"*pa
+
+"" Quick exit
+nnoremap <silent> <F10> :set awa<CR>:qa<CR>
