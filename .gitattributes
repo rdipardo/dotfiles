@@ -1,1 +1,3 @@
 * text eol=lf
+*.cmd text eol=crlf
+_config/nvim/lua/config/dap/** linguist-vendored

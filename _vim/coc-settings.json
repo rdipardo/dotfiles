@@ -1,8 +1,14 @@
 {
 "languageserver": {
+  "clangd": {
+    "command": "clangd",
+    "args": ["--background-index"],
+    "rootPatterns": [".clangd", ".clang-tidy", "compile_commands.json", "compile_flags.txt"],
+    "filetypes": ["c", "cc", "cpp", "c++", "objc", "objcpp"]
+  },
   "fsharp": {
-    "command": "~/.dotnet/tools/fsautocomplete",
-    "args": ["--background-service-enabled"],
+    "command": "dotnet",
+    "args": ["fsautocomplete", "--background-service-enabled"],
     "filetypes": ["fsharp"],
     "trace.server": "verbose",
     "initalizationOptions": {

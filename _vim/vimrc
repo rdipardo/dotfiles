@@ -17,6 +17,7 @@ elseif has('nvim')
 else
   let s:vim_home = expand('~/.vim/')
 endif
+if filereadable(expand(s:vim_home) . 'user.vim') | runtime user.vim | endif
 " }}}
 
 ""      Plugin Setup {{{
@@ -46,6 +47,7 @@ Plug 'sro5h/vim-darkspace'
 " Plug 'yuttie/hydrangea-vim'
 " Plug 'bcat/abbott.vim'
 Plug 'NLKNguyen/papercolor-theme'
+Plug 'twerth/ir_black'
 
 " Plug 'itchyny/lightline.vim'
 Plug 'vim-airline/vim-airline'
@@ -59,9 +61,6 @@ Plug 'krcs/vim-movelines'
 " https://github.com/preservim/tagbar
 Plug 'preservim/tagbar'
 
-"" https://github.com/dense-analysis/ale
-Plug 'dense-analysis/ale'
-
 "" https://github.com/neoclide/coc.nvim
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
@@ -69,19 +68,16 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'mg979/vim-visual-multi', {'branch': 'master'}
 
 "" reStructuredText editing, live previews
-Plug 'Rykka/riv.vim'
-Plug 'Rykka/InstantRst'
-
-"" Markdown
-Plug 'iamcco/markdown-preview.nvim', {'do': 'cd app && yarn install'}
+Plug 'previm/previm'
+Plug 'tyru/open-browser.vim'
 
 "" easily toggle line comments
 Plug 'tpope/vim-commentary'
 
 "" LISP and family
-Plug 'vlime/vlime', {'rtp': 'vim/'}
-Plug 'guns/vim-sexp'
-Plug 'tpope/vim-sexp-mappings-for-regular-people'
+Plug 'vlime/vlime', {'rtp': 'vim/', 'for': 'lisp'}
+Plug 'guns/vim-sexp', {'for': ['clojure', 'lisp', 'raket', 'scheme'] }
+Plug 'tpope/vim-sexp-mappings-for-regular-people', {'for': ['clojure', 'lisp', 'raket', 'scheme'] }
 Plug 'luochen1990/rainbow'
 
 "" intelligent paren matching
@@ -116,20 +112,8 @@ endif
 " Plug 'rust-lang/rust.vim'
 
 "" F# syntax and FSI integration
-Plug 'ionide/Ionide-vim'
+Plug 'PhilT/vim-fsharp'
 
-if has('win32')
-  let g:user#LanguageClient_post_install = 'powershell -ExecutionPolicy Bypass -File .\install.ps1'
-else
-  let g:user#LanguageClient_post_install = 'bash ./install.sh'
-endif
-
-Plug 'autozimu/LanguageClient-neovim', {
-  \ 'branch': 'next',
-  \ 'do': g:user#LanguageClient_post_install
-  \ }
-
-unlet g:user#LanguageClient_post_install
 call plug#end()
 endif
 " }}}
@@ -141,6 +125,34 @@ if (!empty(globpath(&rtp, 'plugins/coc.nvim', 0, 1)))
     " use <CR> to confirm completion
     " https://github.com/neoclide/coc.nvim/issues/4139
     inoremap <expr> <CR> coc#pum#visible() ? coc#_select_confirm() : '\<CR>'
+
+    " https://github.com/neoclide/coc.nvim#example-vim-configuration
+    function! Coc_ShowDocumentation()
+      if CocAction('hasProvider', 'hover')
+        call CocActionAsync('doHover')
+      else
+        call feedkeys('K', 'in')
+      endif
+    endfunction
+
+    nnoremap <silent> [d <Plug>(coc-diagnostic-prev)
+    nnoremap <silent> ]d <Plug>(coc-diagnostic-next)
+    nnoremap <silent> gd <Plug>(coc-definition)
+    nnoremap <silent> gy <Plug>(coc-type-definition)
+    nnoremap <silent> gi <Plug>(coc-implementation)
+    nnoremap <silent> gr <Plug>(coc-references)
+    nnoremap <silent> [k :call Coc_ShowDocumentation()<CR>
+    nnoremap <F2> <Plug>(coc-rename)
+
+    " https://github.com/neoclide/coc.nvim/wiki/F.A.Q#the-selection-highlight-does-not-look-good
+    augroup CocHighlights
+      autocmd ColorScheme *
+          \ hi QuickFixLine ctermbg=none |
+          \ hi CocInfoHighlight ctermbg=000 |
+          \ hi CocHintHighlight ctermbg=000 |
+          \ hi CocWarningHighlight ctermbg=000 |
+          \ hi CocErrorHighlight ctermbg=000
+    augroup END
 endif
 """ }}}
 
@@ -185,83 +197,21 @@ if !empty(globpath(&rtp, 'plugins/vim-iced/bin/iced', 0, 1))
 endif
 " }}}
 
-""" A.L.E. {{{
-""  only run linters named in ale_linters settings:
-""  https://github.com/dense-analysis/ale#faq-disable-linters
-let g:ale_linters_explicit = 1
-let g:ale_fix_on_save = 1
-
-"" clj-kondo: `npm install -g clj-kondo`
-"" rust: rustc, cargo, llvm
-let g:ale_linters = {
-\   'clojure': ['clj-kondo'],
-\   'python': ['pylint3', 'flake8'],
-\   'rust': ['cargo', 'rustc']
-\}
-let g:ale_fixers = {
-\   '*': ['remove_trailing_lines', 'trim_whitespace'],
-\   'c': ['clang-format'],
-\   'c++': ['clang-format'],
-\   'python': ['add_blank_lines_for_python_control_statements',
-\              'reorder-python-imports'],
-\   'ruby': ['rubocop'],
-\   'rust': ['rustfmt']
-\}
-
-map <silent> <C-k> <Plug>(ale_previous)
-map <silent> <C-j> <Plug>(ale_next)
-" }}}
-
-""" Ionide-vim {{{
+""" vim-fsharp {{{
 ""
+" https://github.com/ionide/Ionide-vim/blob/master/autoload/fsharp.vim
 if !empty(globpath(&rtp, 'ftplugin/fsharp.vim', 0, 1))
-    set hidden
-    let mapleader = '\'
-    let g:fsharp#fsi_keymap = 'vim-fsharp'
-    let g:fsharp#backend = (has('nvim')) ? 'nvim' : 'languageclient-neovim'
-    let g:fsharp#exclude_project_directories = ['paket-files']
-    nnoremap <silent> <leader>l <ESC>:call fsharp#sendFsi('#load @"' . expand('%:p') . '"') <CR>
-    nnoremap <silent> <leader>o <ESC>:call fsharp#sendFsi('open ' . expand('%:t:r')) <CR>
-
-    let g:LanguageClient_useVirtualText = 'CodeLens'
-    let g:LanguageClient_serverCommands = {
-        \ 'fsharp': ['~/.dotnet/tools/fsautocomplete', '--background-service-enabled'],
-        \ 'codelens': {
-        \    'generate': v:true
-        \  }
-        \ }
-
-      " https://github.com/autozimu/LanguageClient-neovim#quick-start
-      nnoremap <silent> [g <Plug>(lcn-diagnostics-prev)
-      nnoremap <silent> ]g <Plug>(lcn-diagnostics-next)
-      nnoremap <silent> gd <Plug>(lcn-definition)
-      nnoremap <silent> gy <Plug>(lcn-type-definition)
-      nnoremap <silent> gi <Plug>(lcn-implementation)
-      nnoremap <silent> gr <Plug>(lcn-references)
-      nnoremap <silent> [k <Plug>(lcn-hover)
-      nnoremap <F7> <Plug>(lcn-rename)
-
-      if has('nvim') && exists('*nvim_open_win')
-        set updatetime=1000
-        augroup FSharpShowTooltip
-          autocmd!
-          autocmd CursorHold *.fs,*.fsi,*.fsx call fsharp#showTooltip()
-        augroup END
-    endif
+  augroup FsiConfig
+    au FileType fsharp ++once
+    \ :nnoremap <silent> <leader>l <ESC> :call user#launchTerm('dotnet fsi --load:' . user#quote(), 'F# Interactive')<CR>
+  augroup END
 endif
 " }}}
 
-""" riv.vim {{{
+""" previm {{{
 ""
-let g:riv_section_levels = '=-^"''`'
-let g:riv_fold_auto_update = 0
-let g:instant_rst_localhost_only = 1
-
-augroup RivUpdateFolds
-    autocmd!
-    au BufNewFile,BufRead *.rst :norm zx zi
-    au BufWritePost *.rst :norm zx zi
-augroup END
+let g:previm_enable_realtime=1
+exe 'let g:previm_open_cmd="' . (!has('win32') ? 'xdg-open' : '' ) . '"'
 " }}}
 
 """ rainbow
@@ -276,13 +226,30 @@ nmap <silent> <F12> :TagbarToggle<CR>
 nnoremap <silent> <A-DOWN> :call MoveLineNormal("d")<CR>
 vnoremap <silent> <A-DOWN> :call MoveLinesVisual("down")<CR>
 
-"" Maxima
-augroup MaximaConfig
-    au BufNewFile,BufRead *.mac,*.mc,*.wxm :set ft=maxima
-    au FileType maxima
-    \ nnoremap <F8> :exec '!maxima --very-quiet < '.escape(expand('%'), ' ,\')<CR>
+"" FORTH
+augroup ForthConfig
+    au VimEnter,BufReadPost *.*4,*.4th,*.forth,*.frt,*.fs,*.fth :setl ft=forth
+    au FileType forth ++once
+    \ :nnoremap <leader>l <ESC> :call user#launchTerm('gforth '. user#quote())<CR>
 augroup END
 
+"" Maxima
+augroup MaximaConfig
+    au VimEnter,BufNewFile,BufRead *.mac,*.mc,*.wxm :set ft=maxima
+    au FileType maxima ++once
+    \ nnoremap <silent> <leader>l <ESC> :call user#launchTerm('maxima --very-quiet -r "'.escape(join(readfile(user#esc())),'",\').'"')<CR> |
+    \ nnoremap <silent> <leader>e <ESC> :echo system('maxima --very-quiet < '. user#quote())<CR>
+augroup END
+
+"" (Chez) Scheme
+augroup SchemeConfig
+    au FileType scheme ++once
+    \ :nnoremap <C-L> <ESC> :call user#launchTerm('scheme '. user#quote())<CR>
+augroup END
+
+"" zig.vim
+"" https://github.com/ziglang/zig.vim/issues/51
+let g:zig_fmt_autosave = 0
 " }}}
 
 ""      General Vim Settings {{{
@@ -303,6 +270,7 @@ let g:netrw_banner=0
 let g:netrw_browse_split=4
 let g:netrw_altv=1
 let g:netrw_liststyle=3
+let g:netrw_keepdir = 0
 
 "" https://shapeshed.com/vim-netrw/#changing-the-directory-view-in-netrw
 let g:netrw_altv = 1
@@ -310,18 +278,22 @@ let g:netrw_winsize = 20
 
 augroup EditorDefaults
   autocmd!
-  au VimEnter * :Vexplore | :wincmd l
+  let g:xml_syntax_folding = 1
+  au FileType xml,html,xhtml :setlocal foldmethod=syntax   
+  au VimEnter * if &filetype !=# 'gitcommit' | :Vexplore | :wincmd l | endif
   au BufRead,BufNewFile *.markdown,*.md,*.rst,*.textile,*.txt :setlocal spell
-  au FileType gitcommit :setlocal spell
+  au FileType gitcommit :setlocal spell | :set cc=50,72
   "" trim trailing space on save
   au BufWritePre * :%s/\s\+$//e
 augroup END
 
 """ Colours {{{
 set background=dark
-colorscheme industry
+exe 'colorscheme ' . (index(getcompletion('', 'color'), 'habamax') > -1 ? 'habamax' : 'industry')
 
-if (v:version >= 800)
+if g:colors_name !=# 'habamax' && index(getcompletion('', 'color'), 'ir_black') > -1
+  colorscheme ir_black
+elseif (v:version >= 800)
   set termguicolors "Switch off for WSL!
   if index(getcompletion('', 'color'), 'deep-space') > -1
     colorscheme deep-space
@@ -348,6 +320,8 @@ if has('gui_running')
     set guifont=Consolas:h11:cANSI
   endif
 endif
+
+set guicursor=n-v-c-sm:ver25,i-ci-ve:ver25,r-cr-o:hor20
 " }}}
 
 """ Editor {{{
@@ -383,8 +357,8 @@ set noswapfile " keep source trees clean
 nnoremap qw ciw'<C-r>"'<Esc>
 nnoremap qqw ciw"<C-r>""<Esc>
 nnoremap sw ciw(<C-r>")<Esc>
-nnoremap swb v%c[<C-r>"]<Esc>
-nnoremap swcb v%c{<C-r>"}<Esc>
+nnoremap swb ciw[<C-r>"]<Esc>
+nnoremap swr ciw{<C-r>"}<Esc>
 
 "" hide search matches: https://stackoverflow.com/a/657457
 nnoremap <silent> <Space>h :noh<CR>
@@ -396,6 +370,7 @@ nnoremap <silent> <C-V> <Esc>"*p<Esc>
 inoremap <buffer> <C-V> <Esc>"*pa
 
 "" Quick exit
+tnoremap <silent> <Esc><Esc> <C-\><C-n> :wincmd k<CR>
 nnoremap <silent> <F10> :set awa<CR>:qa<CR>
 " }}}
 

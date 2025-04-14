@@ -67,15 +67,15 @@ fi
 if [ "$color_prompt" = yes ]; then
     if [ "$UID" = 0 ]; then
         PS1="$red\u$nc@$red\H$nc:$CYAN\w$nc\\n#$nc "
-    elif [ -f $GIT_PROMPT_SH ]; then
-        source $GIT_PROMPT_SH
+    elif [ -f "$GIT_PROMPT_SH" ]; then
+        source "$GIT_PROMPT_SH"
         # https://dev.to/bunnyladame/display-git-branch-info-in-bash-prompts-3nf5
         GIT_PS1_SHOWDIRTYSTATE='y'
         GIT_PS1_SHOWSTASHSTATE='y'
         GIT_PS1_SHOWUNTRACKEDFILES='y'
         GIT_PS1_DESCRIBE_STYLE='contains'
         GIT_PS1_SHOWUPSTREAM='auto'
-        CURR_BRANCH='$(__git_ps1)'
+        CURR_BRANCH="\$(__git_ps1)"
 
         PS1="$CYAN\u$nc@$yellow\H$nc:$BLUE\w$PURPLE${CURR_BRANCH}$nc\\n\$$nc "
      else

@@ -1,11 +1,13 @@
 ""      Plugin Configuration  {{{
 ""
-lua require ('config.packer')
+lua require ('config.lazy')
+
+if (!empty(globpath(&rtp, 'user.vim', 0, 0))) | runtime user.vim | endif
 
 augroup CorePlugins
   au VimEnter *
-  \ :exe 'lua require ("config.cmp")' |
-  \ :exe 'lua require ("config.mason-lspconfig")' |
+  \ :exe 'lua require ("config.lspconfig")' |
+  \ :exe 'lua require ("config.telescope")' |
   \ :exe 'lua require ("config.mini-surround")'
 augroup END
 
@@ -13,58 +15,52 @@ augroup END
 "" first install and configure quicklisp: https://www.quicklisp.org/beta/#loading
 augroup LoadVlime
     autocmd!
-    au FileType lisp :lua require ('config.vlime')
+    au FileType lisp ++once :lua require ('config.vlime')
 augroup END
 " }}}
 
-""" Ionide-vim {{{
-""
-augroup LoadIonide
+augroup SetupLLDB
   autocmd!
-  au BufNewFile,BufRead *.fs,*.fsx,*.fsi,*.fsscript
-  \ :exe 'lua require ("config.ionide")' |
-  \ :setlocal hidden |
-  \ :let mapleader = '\' |
-  \ :let g:fsharp#fsi_keymap = 'vim-fsharp' |
-  \ :let g:fsharp#exclude_project_directories = ['paket-files'] |
-  \ :let g:fsharp#lsp_auto_setup = 0 |
-  \ :nnoremap <silent> <leader>l <ESC>:call fsharp#sendFsi('#load @"' . expand('%:p') . '"') <CR> |
-  \ :nnoremap <silent> <leader>o <ESC>:call fsharp#sendFsi('open ' . expand('%:t:r')) <CR>
+  au FileType c,cpp ++once
+  \ :exec 'lua vim.lsp.enable({ "clangd" })' |
+  \ :exec 'lua require("config.dap.cpp")'
 augroup END
-" }}}
 
-""" riv.vim {{{
-""
-let g:riv_section_levels = '=-^"''`'
-let g:riv_fold_auto_update = 0
-let g:instant_rst_localhost_only = 1
-
-augroup RivUpdateFolds
-    autocmd!
-    au BufNewFile,BufRead *.rst :norm zx zi
-    au BufWritePost *.rst :norm zx zi
+augroup LoadRustAnalyzer
+  autocmd!
+  au FileType rust ++once :lua vim.lsp.enable({ 'rust-analyzer' })
 augroup END
-" }}}
 
-""" rainbow
-""
-let g:rainbow_active = 1
+augroup LoadFSAC
+  autocmd!
+  au FileType fsharp ++once
+  \ :exe 'lua require ("config.setup-fsac")' |
+  \ :nnoremap <silent> <leader>l <ESC> :call user#launchTerm('dotnet fsi --load:' . user#quote(), 'F# Interactive')<CR>
+augroup END
 
-""" Tagbar
-""
-nmap <silent> <F12> :TagbarToggle<CR>
-
-"" vim-movelines
-nnoremap <silent> <A-DOWN> :call MoveLineNormal("d")<CR>
-vnoremap <silent> <A-DOWN> :call MoveLinesVisual("down")<CR>
+"" FORTH
+augroup ForthConfig
+    au VimEnter,BufReadPost *.*4,*.4th,*.forth,*.frt,*.fth :setl ft=forth
+    au FileType forth ++once
+    \ :nnoremap <leader>l <ESC> :call user#launchTerm('gforth '. user#quote())<CR>
+augroup END
 
 "" Maxima
 augroup MaximaConfig
     au BufNewFile,BufRead *.mac,*.mc,*.wxm :set ft=maxima
-    au FileType maxima
-    \ nnoremap <F8> :exec '!maxima --very-quiet < '.escape(expand('%'), ' ,\')<CR>
+    au FileType maxima ++once
+    \ nnoremap <leader>e :exec '!maxima --very-quiet < '. user#quote()<CR>
 augroup END
 
+"" (Chez) Scheme
+augroup SchemeConfig
+    au FileType scheme ++once
+    \ :nnoremap <C-L> <ESC> :call user#launchTerm('scheme '. user#quote())<CR>
+augroup END
+
+"" zig.vim
+"" https://github.com/ziglang/zig.vim/issues/51
+let g:zig_fmt_autosave = 0
 " }}}
 
 ""      General Vim Settings {{{
@@ -74,6 +70,7 @@ scriptencoding utf-8
 
 """ Window Behaviour
 set wildmenu "show completions in status bar
+set completeopt+=noselect
 set laststatus=2
 
 "" https://thoughtbot.com/blog/vim-splits-move-faster-and-more-naturally
@@ -85,6 +82,7 @@ let g:netrw_banner=0
 let g:netrw_browse_split=4
 let g:netrw_altv=1
 let g:netrw_liststyle=3
+let g:netrw_keepdir = 0
 
 "" https://shapeshed.com/vim-netrw/#changing-the-directory-view-in-netrw
 let g:netrw_altv = 1
@@ -92,7 +90,8 @@ let g:netrw_winsize = 20
 
 augroup EditorDefaults
   autocmd!
-  au VimEnter * :Vexplore | :wincmd l
+  let g:xml_syntax_folding = 1
+  au FileType xml,html,xhtml :setlocal foldmethod=syntax
   au BufRead,BufNewFile *.markdown,*.md,*.rst,*.textile,*.txt :setlocal spell
   au FileType gitcommit :setlocal spell
   "" trim trailing space on save
@@ -104,8 +103,11 @@ set background=dark
 colorscheme industry
 set termguicolors "Switch off for WSL!
 
-if index(getcompletion('', 'color'), 'tokyonight') > -1
-  colorscheme tokyonight-night
+if index(getcompletion('', 'color'), 'catppuccin') > -1
+  colorscheme catppuccin-mocha
+elseif index(getcompletion('', 'color'), 'tokyonight') > -1
+  let s:theme = has('win32') ? 'moon' : 'night'
+  exe 'colorscheme tokyonight-' . s:theme
 elseif index(getcompletion('', 'color'), 'deep-space') > -1
   colorscheme deep-space
   let g:deepspace_italics=1
@@ -130,6 +132,8 @@ if has('gui_running')
     set guifont=Consolas:h11:cANSI
   endif
 endif
+
+set guicursor=n-v-c-sm:ver25,i-ci-ve:ver25,r-cr-o:hor20
 " }}}
 
 """ Editor {{{
@@ -161,13 +165,6 @@ set noswapfile " keep source trees clean
 
 """ Key mappings {{{
 
-"" Surround with quote: https://stackoverflow.com/a/2148055
-nnoremap qw ciw'<C-r>"'<Esc>
-nnoremap qqw ciw"<C-r>""<Esc>
-nnoremap sw ciw(<C-r>")<Esc>
-nnoremap swb v%c[<C-r>"]<Esc>
-nnoremap swcb v%c{<C-r>"}<Esc>
-
 "" hide search matches: https://stackoverflow.com/a/657457
 nnoremap <silent> <Space>h :noh<CR>
 nnoremap <silent> <Space>s :w %<CR>
@@ -178,6 +175,7 @@ nnoremap <silent> <C-V> <Esc>"*p<Esc>
 inoremap <buffer> <C-V> <Esc>"*pa
 
 "" Quick exit
+tnoremap <silent> <Esc><Esc> <C-\><C-n> :wincmd k<CR>
 nnoremap <silent> <F10> :set awa<CR>:qa<CR>
 " }}}
 

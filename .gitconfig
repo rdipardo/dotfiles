@@ -21,3 +21,7 @@
   fsckObjects = true
 [pull]
   rebase = false
+[blame]
+  # ignoreRevsFile = .git-blame-ignore-revs
+  markIgnoredLines = true
+  markUnblamableLines = true

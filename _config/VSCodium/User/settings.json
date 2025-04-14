@@ -1,0 +1,39 @@
+{
+    "workbench.enableExperiments": false,
+    "extensions.autoCheckUpdates": true,
+    "workbench.startupEditor": "none",
+    "editor.minimap.enabled": false,
+    "editor.semanticHighlighting.enabled": true,
+    "git.autoStash": true,
+    "git.openRepositoryInParentFolders": "always",
+    "diffEditor.renderSideBySide": false,
+    "diffEditor.ignoreTrimWhitespace": false,
+    "diffEditor.hideUnchangedRegions.enabled": true,
+    "terminal.integrated.enableImages": false,
+    "terminal.integrated.useWslProfiles": false,
+    "terminal.integrated.persistentSessionReviveProcess": "never",
+    "terminal.integrated.allowChords": false,
+    "terminal.integrated.sendKeybindingsToShell": true,
+    "terminal.integrated.cursorStyle": "line",
+    "terminal.integrated.minimumContrastRatio": 1,
+    "window.titleBarStyle": "custom",
+    "window.zoomLevel": -1,
+    "explorer.confirmDelete": false,
+    "files.trimTrailingWhitespace": true,
+    "workbench.colorTheme": "Catppuccin Mocha",
+    "catppuccin.italicKeywords": false,
+    "catppuccin.accentColor": "lavender",
+    "catppuccin.bracketMode": "neovim",
+    "catppuccin.colorOverrides": {
+        "mocha": {
+            "base": "#0d1117",
+            "mantle": "#11111b",
+            "crust": "#181825"
+        }
+    },
+    "catppuccin.customUIColors": {
+        "mocha": {
+            "statusBar.foreground": "accent"
+        }
+    }
+}
