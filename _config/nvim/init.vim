@@ -64,6 +64,7 @@ let g:zig_fmt_autosave = 0
 " }}}
 
 ""      General Vim Settings {{{
+set shellcmdflag=-ic
 set fileencodings=utf-8,latin1
 set encoding=utf-8
 scriptencoding utf-8

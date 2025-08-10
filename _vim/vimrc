@@ -253,6 +253,7 @@ let g:zig_fmt_autosave = 0
 " }}}
 
 ""      General Vim Settings {{{
+set shellcmdflag=-ic
 set fileencodings=utf-8,latin1
 set encoding=utf-8
 scriptencoding utf-8
@@ -280,7 +281,7 @@ augroup EditorDefaults
   autocmd!
   let g:xml_syntax_folding = 1
   au FileType xml,html,xhtml :setlocal foldmethod=syntax   
-  au VimEnter * if &filetype !=# 'gitcommit' | :Vexplore | :wincmd l | endif
+  au VimEnter * if &filetype !=# 'gitcommit' && !has('nvim') | :Vexplore | :wincmd l | endif
   au BufRead,BufNewFile *.markdown,*.md,*.rst,*.textile,*.txt :setlocal spell
   au FileType gitcommit :setlocal spell | :set cc=50,72
   "" trim trailing space on save
